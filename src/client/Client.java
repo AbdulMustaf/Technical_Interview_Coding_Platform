@@ -1,4 +1,4 @@
-package client; // Add package declaration
+package client;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
