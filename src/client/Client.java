@@ -4,6 +4,8 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -24,11 +26,15 @@ public class Client {
                 try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
                     String message;
                     while ((message = in.readLine()) != null) {
-                        // Logic for a editor or chat message
                         if (message.startsWith("CHAT:")) {
                             updateChat(message.substring(5));
-                        } else {
-                            updateEditor(message);
+                        
+                        } else if (message.startsWith("EDITOR:")) {
+                            // Creates a string of the new editor content and updates.
+                            String encodedContent = message.substring(7);
+                            byte[] decodedBytes = Base64.getDecoder().decode(encodedContent);
+                            String decodedContent = new String(decodedBytes, StandardCharsets.UTF_8);
+                            updateEditor(decodedContent);
                         }
                     }
                 } catch (Exception e) {
@@ -125,7 +131,9 @@ public class Client {
 
     private void triggerCodeUpdate() {
         if (!isUpdatingFromServer) {
-            out.println(editorArea.getText());
+            String content = editorArea.getText();
+            String encoded = Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8));
+            out.println("EDITOR:" + encoded);
         }
     }
 
