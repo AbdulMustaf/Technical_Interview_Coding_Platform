@@ -38,4 +38,11 @@ public class ClientHandler extends Thread {
             clients.remove(this);
         }
     }
+
+    // Synchronized method to ensure thread-safe writes
+    public void sendMessage(String message) {
+        synchronized (out) {
+            out.println(message);
+        }
+    }
 }
