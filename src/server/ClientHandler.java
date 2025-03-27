@@ -20,10 +20,9 @@ public class ClientHandler extends Thread {
     public void run() {
         try (
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            // Remove redeclaration of "out" (use the class field directly)
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true) 
         ) {
-            this.out = writer; // Assign to the class field
+            this.out = writer;
 
             // Send latest editor content to new clients
             if (Server.latestEditorContent != null) {
@@ -47,13 +46,10 @@ public class ClientHandler extends Thread {
             System.err.println("ClientHandler error: " + e.getMessage());
         } finally {
             clients.remove(this);
-        }
-    }
-
-    // Synchronized method to ensure thread-safe writes
-    public void sendMessage(String message) {
-        synchronized (out) {
-            out.println(message);
+            // Clear editor state when last client disconnects
+            if (clients.isEmpty()) {
+                Server.clearEditorState();
+            }
         }
     }
 }

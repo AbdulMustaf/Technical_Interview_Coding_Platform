@@ -9,6 +9,11 @@ public class Server {
     private static final CopyOnWriteArrayList<ClientHandler> clients = new CopyOnWriteArrayList<>();
     public static volatile String latestEditorContent = null; // Track latest editor state
 
+    public static void clearEditorState() {
+        latestEditorContent = null;
+        System.out.println("All clients disconnected - editor state cleared");
+    }
+
     public static void main(String[] args) {
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             System.out.println("Server started on port " + PORT);

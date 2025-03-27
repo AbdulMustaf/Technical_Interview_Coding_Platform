@@ -2,6 +2,8 @@ package client;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -11,11 +13,11 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
 public class Client {
-    private PrintWriter out;
+    private PrintWriter out; // For sending commands to server
     private JTextArea editorArea;
     private JTextArea chatArea;
     private boolean isUpdatingFromServer = false;
-    private File currentFile;
+    private File currentFile; // Holds editor content
 
     public Client() {
         try {
@@ -26,16 +28,17 @@ public class Client {
                 try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
                     String message;
                     while ((message = in.readLine()) != null) {
-                        if (message.startsWith("CHAT:")) {
+                        if (message.startsWith("CHAT:")) { // Chat messages
                             updateChat(message.substring(5));
                         
-                        } else if (message.startsWith("EDITOR:")) {
+                        } else if (message.startsWith("EDITOR:")) { // Creates encoded version of sent editor text
                             // Creates a string of the new editor content and updates.
                             String encodedContent = message.substring(7);
                             byte[] decodedBytes = Base64.getDecoder().decode(encodedContent);
                             String decodedContent = new String(decodedBytes, StandardCharsets.UTF_8);
-                            updateEditor(decodedContent);
-                        }
+                            updateEditor(decodedContent); // Sends to updateEditor() to display the new editor version
+
+                        } 
                     }
                 } catch (Exception e) {
                     System.err.println("Client read error: " + e.getMessage());
@@ -67,6 +70,7 @@ public class Client {
         menuBar.add(fileMenu);
         frame.setJMenuBar(menuBar);
 
+        // Text editor
         editorArea = new JTextArea();
         editorArea.getDocument().addDocumentListener(new DocumentListener() {
             @Override
@@ -103,6 +107,7 @@ public class Client {
             String msg = chatInput.getText().trim();
             if (!msg.isEmpty() && !msg.equals("Type Here")) {
                 out.println("CHAT:" + msg);
+                updateChat("You: " + msg);
                 chatInput.setText("");
             }
         });
@@ -120,8 +125,32 @@ public class Client {
         editorPanel.add(editorLabel, BorderLayout.NORTH);
         editorPanel.add(new JScrollPane(editorArea), BorderLayout.CENTER);
 
+        // Editor and Chat and sizing
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, editorPanel, chatPanel);
-        splitPane.setDividerLocation(500);
+        splitPane.setResizeWeight(0.7); // 70% to editor
+        splitPane.setContinuousLayout(true);
+
+        // Set initial divider location
+        SwingUtilities.invokeLater(() -> {
+            try {
+                // Use proportional location directly
+                splitPane.setDividerLocation(0.7);
+            } catch (IllegalArgumentException e) {
+                // Fallback to pixel location if needed
+                splitPane.setDividerLocation(500);
+            }
+        });
+
+        // Resize listener
+        splitPane.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                // Only update if the split pane has a positive size
+                if (splitPane.getWidth() > 0 && splitPane.getHeight() > 0) {
+                    splitPane.setDividerLocation(0.7);
+                }
+            }
+        });
 
         frame.add(splitPane);
         frame.setVisible(true);
@@ -149,7 +178,7 @@ public class Client {
         SwingUtilities.invokeLater(() -> chatArea.append(text + "\n"));
     }
 
-    // Opens a file from client computer
+    // Opens a file from client computer and puts it onto the editor
     private void openFile(ActionEvent e) {
         JFileChooser fileChooser = new JFileChooser();
         int option = fileChooser.showOpenDialog(null);
