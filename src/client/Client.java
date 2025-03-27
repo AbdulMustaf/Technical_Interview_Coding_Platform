@@ -1,61 +1,51 @@
 package client;
 
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
+import java.awt.event.*;
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
+import javax.swing.event.*;
 
 public class Client {
     private PrintWriter out; // For sending commands to server
+    private Socket socket;
     private JTextArea editorArea;
     private JTextArea chatArea;
     private boolean isUpdatingFromServer = false;
-    private File currentFile; // Holds editor content
+    private File currentFile;
+    private volatile boolean isConnected = true; // For updating status of client connection to server
 
     public Client() {
         try {
-            Socket socket = new Socket("localhost", 8080);
+            socket = new Socket("localhost", 8080);
             out = new PrintWriter(socket.getOutputStream(), true);
 
-            new Thread(() -> {
-                try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
-                    String message;
-                    while ((message = in.readLine()) != null) {
-                        if (message.startsWith("CHAT:")) { // Chat messages
-                            updateChat(message.substring(5));
-                        
-                        } else if (message.startsWith("EDITOR:")) { // Creates encoded version of sent editor text
-                            // Creates a string of the new editor content and updates.
-                            String encodedContent = message.substring(7);
-                            byte[] decodedBytes = Base64.getDecoder().decode(encodedContent);
-                            String decodedContent = new String(decodedBytes, StandardCharsets.UTF_8);
-                            updateEditor(decodedContent); // Sends to updateEditor() to display the new editor version
-
-                        } 
-                    }
-                } catch (Exception e) {
-                    System.err.println("Client read error: " + e.getMessage());
+            JFrame frame = buildGUI();
+            // If window is closed; shutdown(close resources)
+            frame.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosing(WindowEvent e) {
+                    shutdownClient();
                 }
-            }).start();
+            });
+
+            startServerListenerThread(); // Multi-threads server commands and handles logic of commands and function calling
         } catch (Exception e) {
             System.err.println("Client connection error: " + e.getMessage());
+            shutdownClient();
         }
-        buildGUI();
     }
 
-    private void buildGUI() {
+    private JFrame buildGUI() {
         JFrame frame = new JFrame("Interview Client");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(800, 500);
 
-        //File I/O menu
+        // File I/O menu
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("File");
         JMenuItem openItem = new JMenuItem("Open");
@@ -70,14 +60,14 @@ public class Client {
         menuBar.add(fileMenu);
         frame.setJMenuBar(menuBar);
 
-        // Text editor
+        // Text editor changes handling
         editorArea = new JTextArea();
         editorArea.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
+            @Override 
             public void insertUpdate(DocumentEvent e) { triggerCodeUpdate(); }
-            @Override
+            @Override 
             public void removeUpdate(DocumentEvent e) { triggerCodeUpdate(); }
-            @Override
+            @Override 
             public void changedUpdate(DocumentEvent e) {}
         });
 
@@ -85,25 +75,39 @@ public class Client {
         chatArea = new JTextArea();
         chatArea.setEditable(false);
         JScrollPane chatScrollPane = new JScrollPane(chatArea);
+        
+        JTextField chatInput = createChatInput(); // Creates chat input box
+        
+        // Adding editor and chat to the frame
+        JSplitPane splitPane = createSplitPane(chatScrollPane, chatInput); // Formatted and labeled splitpane
+        frame.add(splitPane);
+        
+        frame.setVisible(true);
+        return frame;
+    }
+
+    // Functionality for chat inout field
+    private JTextField createChatInput() {
         JTextField chatInput = new JTextField("Type Here");
         chatInput.setForeground(Color.GRAY);
-        // Listener to properly display "Type Here" for the user
-        chatInput.addFocusListener(new java.awt.event.FocusAdapter() {
-            public void focusGained(java.awt.event.FocusEvent evt) {
+        // Displaying "Type Here" on chat input field
+        chatInput.addFocusListener(new FocusAdapter() {
+            @Override public void focusGained(FocusEvent e) {
                 if (chatInput.getText().equals("Type Here")) {
                     chatInput.setText("");
                     chatInput.setForeground(Color.BLACK);
                 }
             }
-            public void focusLost(java.awt.event.FocusEvent evt) {
+            @Override public void focusLost(FocusEvent e) {
                 if (chatInput.getText().isEmpty()) {
                     chatInput.setText("Type Here");
                     chatInput.setForeground(Color.GRAY);
                 }
             }
         });
-        // Chat message sending from GUI
-        chatInput.addActionListener((ActionEvent e) -> {
+        
+        // Taking message from chat input field and sending to chat box and server
+        chatInput.addActionListener(e -> {
             String msg = chatInput.getText().trim();
             if (!msg.isEmpty() && !msg.equals("Type Here")) {
                 out.println("CHAT:" + msg);
@@ -111,61 +115,107 @@ public class Client {
                 chatInput.setText("");
             }
         });
+        return chatInput;
+    }
 
-        // GUI layout
-        JLabel editorLabel = new JLabel("Editor");
-        JLabel chatLabel = new JLabel("Chat");
-        
+    // Makes labeled and formatted splitpane for editor and chat
+    private JSplitPane createSplitPane(JScrollPane chatScrollPane, JTextField chatInput) {
+        // JPanels for editor and chat added
         JPanel chatPanel = new JPanel(new BorderLayout());
-        chatPanel.add(chatLabel, BorderLayout.NORTH);
+        chatPanel.add(new JLabel("Chat"), BorderLayout.NORTH);
         chatPanel.add(chatScrollPane, BorderLayout.CENTER);
         chatPanel.add(chatInput, BorderLayout.SOUTH);
 
         JPanel editorPanel = new JPanel(new BorderLayout());
-        editorPanel.add(editorLabel, BorderLayout.NORTH);
+        editorPanel.add(new JLabel("Editor"), BorderLayout.NORTH);
         editorPanel.add(new JScrollPane(editorArea), BorderLayout.CENTER);
 
-        // Editor and Chat and sizing
+        // Editor and caht sizing
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, editorPanel, chatPanel);
-        splitPane.setResizeWeight(0.7); // 70% to editor
+        splitPane.setResizeWeight(0.7);
         splitPane.setContinuousLayout(true);
 
         // Set initial divider location
         SwingUtilities.invokeLater(() -> {
             try {
-                // Use proportional location directly
                 splitPane.setDividerLocation(0.7);
             } catch (IllegalArgumentException e) {
-                // Fallback to pixel location if needed
                 splitPane.setDividerLocation(500);
             }
         });
 
-        // Resize listener
+        // Window resize listener
         splitPane.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
-                // Only update if the split pane has a positive size
-                if (splitPane.getWidth() > 0 && splitPane.getHeight() > 0) {
+            @Override public void componentResized(ComponentEvent e) {
+                if (splitPane.getWidth() > 0) {
                     splitPane.setDividerLocation(0.7);
                 }
             }
         });
-
-        frame.add(splitPane);
-        frame.setVisible(true);
+        
+        return splitPane;
     }
 
-    // GUI functions and server interaction
+    // Server command recieving and handling logic
+    private void startServerListenerThread() {
+        new Thread(() -> {
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+                String message;
+                while (isConnected && (message = in.readLine()) != null) {
+                    if (message.startsWith("CHAT:")) { // Chat messages sent to chat
+                        updateChat(message.substring(5));
 
+                    } else if (message.startsWith("EDITOR:")) { // Editor updates to editor
+                        String encodedContent = message.substring(7);
+                        byte[] decodedBytes = Base64.getDecoder().decode(encodedContent);
+                        String decodedContent = new String(decodedBytes, StandardCharsets.UTF_8);
+                        updateEditor(decodedContent);
+                    }
+                }
+            } catch (SocketException e) {
+                if (isConnected) {
+                    SwingUtilities.invokeLater(() -> {
+                        updateChat("Connection to server lost!");
+                        disableInputs();
+                    });
+                }
+            } catch (Exception e) {
+                SwingUtilities.invokeLater(() -> {
+                    updateChat("Error: " + e.getMessage());
+                });
+            } finally {
+                shutdownClient(); // Closes resources.
+            }
+        }).start();
+    }
+
+    // Ensures all resources close to stop memory leak(s)
+    private void shutdownClient() {
+        isConnected = false;
+        try {
+            if (out != null) out.close();
+            if (socket != null && !socket.isClosed()) {
+                socket.close();
+            }
+        } catch (IOException e) {
+            System.err.println("Error closing resources: " + e.getMessage());
+        }
+    }
+
+    private void disableInputs() {
+        editorArea.setEnabled(false);
+    }
+
+    // If client chages editor, it is sent to server
     private void triggerCodeUpdate() {
-        if (!isUpdatingFromServer) {
+        if (!isUpdatingFromServer && isConnected) {
             String content = editorArea.getText();
             String encoded = Base64.getEncoder().encodeToString(content.getBytes(StandardCharsets.UTF_8));
             out.println("EDITOR:" + encoded);
         }
     }
 
+    // Changes text displayed on editor
     private void updateEditor(String text) {
         SwingUtilities.invokeLater(() -> {
             isUpdatingFromServer = true;
@@ -174,6 +224,7 @@ public class Client {
         });
     }
 
+    // Add new chat message from server to chat box
     private void updateChat(String text) {
         SwingUtilities.invokeLater(() -> chatArea.append(text + "\n"));
     }
@@ -182,16 +233,20 @@ public class Client {
     private void openFile(ActionEvent e) {
         JFileChooser fileChooser = new JFileChooser();
         int option = fileChooser.showOpenDialog(null);
+
         if (option == JFileChooser.APPROVE_OPTION) {
             currentFile = fileChooser.getSelectedFile();
+
             try (BufferedReader br = new BufferedReader(new FileReader(currentFile))) {
                 StringBuilder fileContent = new StringBuilder();
                 String line;
+
                 while ((line = br.readLine()) != null) {
                     fileContent.append(line).append("\n");
                 }
                 editorArea.setText(fileContent.toString());
                 out.println(editorArea.getText());
+
             } catch (IOException ex) {
                 JOptionPane.showMessageDialog(null, "Error reading file: " + ex.getMessage());
             }
