@@ -24,8 +24,19 @@ public class ClientHandler extends Thread {
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true) 
         ) {
             this.out = writer; // Assign to the class field
+
+            // Send latest editor content to new clients
+            if (Server.latestEditorContent != null) {
+                this.out.println(Server.latestEditorContent);
+            }
+
             String message;
             while ((message = in.readLine()) != null) {
+                // Update server's latest editor content
+                if (message.startsWith("EDITOR:")) {
+                    Server.latestEditorContent = message;
+                }
+                // Broadcast to other clients
                 for (ClientHandler client : clients) {
                     if (client != this) {
                         client.out.println(message);

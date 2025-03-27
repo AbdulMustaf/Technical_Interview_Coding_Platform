@@ -7,6 +7,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class Server {
     private static final int PORT = 8080;
     private static final CopyOnWriteArrayList<ClientHandler> clients = new CopyOnWriteArrayList<>();
+    public static volatile String latestEditorContent = null; // Track latest editor state
 
     public static void main(String[] args) {
         try (ServerSocket serverSocket = new ServerSocket(PORT)) {
