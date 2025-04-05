@@ -80,7 +80,7 @@ public class LoginSignupFrame extends JFrame {
             User user = UserRepository.findUserByUsername(username);
             if (user != null && user.getPassword().equals(password)) {
                 dispose();
-                new Client();
+                new Client(user.getUsername());
             } else {
                 JOptionPane.showMessageDialog(this, "Invalid credentials");
             }

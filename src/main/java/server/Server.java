@@ -2,12 +2,14 @@ package server;
 
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Server {
     private static final int PORT = 8080;
     private static final CopyOnWriteArrayList<ClientHandler> clients = new CopyOnWriteArrayList<>();
     public static volatile String latestEditorContent = null; // Track latest editor state
+    public static final ConcurrentHashMap<String, String> clientIdToUsername = new ConcurrentHashMap<>();
 
     public static void clearEditorState() {
         latestEditorContent = null;
