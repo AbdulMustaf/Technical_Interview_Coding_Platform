@@ -1,4 +1,4 @@
-package client;
+package Client;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -282,6 +282,6 @@ public class Client {
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(Client::new);
+        SwingUtilities.invokeLater(() -> new LoginSignupFrame());
     }
 }
