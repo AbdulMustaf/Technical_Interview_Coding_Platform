@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -63,6 +64,9 @@ public class Client {
     private final Map<String, Boolean> remoteFocusStates = new ConcurrentHashMap<>();
 
     private RemoteCursorOverlay overlay;
+    
+    // Timer label (will show the shared timer state)
+    private JLabel timerLabel;
 
     public Client(String username) {
         this.username = username;
@@ -82,7 +86,7 @@ public class Client {
                 public void windowDeactivated(WindowEvent e) {
                     out.println("FOCUS:" + clientId + ":lost");
                 }
-                
+               
                 @Override
                 public void windowActivated(WindowEvent e) {
                     out.println("FOCUS:" + clientId + ":gained");
@@ -132,14 +136,33 @@ public class Client {
         menuBar.add(fileMenu);
         frame.setJMenuBar(menuBar);
 
+        // Create header panel with timer and control buttons at the top-right
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        JPanel timerPanel = new JPanel(); // uses FlowLayout by default
+        timerLabel = new JLabel("Timer: 00:00");
+        JButton startButton = new JButton("Start ⏵");
+        JButton pauseButton = new JButton("Pause ⏸");
+        JButton resetButton = new JButton("Reset 🔁");
+
+        // When buttons are clicked, send timer control commands to server
+        startButton.addActionListener(e -> out.println("TIMER_START"));
+        pauseButton.addActionListener(e -> out.println("TIMER_PAUSE"));
+        resetButton.addActionListener(e -> out.println("TIMER_RESET"));
+
+        timerPanel.add(timerLabel);
+        timerPanel.add(startButton);
+        timerPanel.add(pauseButton);
+        timerPanel.add(resetButton);
+        headerPanel.add(timerPanel, BorderLayout.EAST);
+
         // Create editor area with document change listener
         editorArea = new JTextArea();
         editorArea.getDocument().addDocumentListener(new DocumentListener() {
-            @Override 
+            @Override
             public void insertUpdate(DocumentEvent e) { triggerCodeUpdate(); }
-            @Override 
+            @Override
             public void removeUpdate(DocumentEvent e) { triggerCodeUpdate(); }
-            @Override 
+            @Override
             public void changedUpdate(DocumentEvent e) {}
         });
 
@@ -172,7 +195,7 @@ public class Client {
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, layeredPane, chatPanel);
         splitPane.setResizeWeight(0.7);
         splitPane.setContinuousLayout(true);
-        
+       
         // Set initial divider location and resize handling
         SwingUtilities.invokeLater(() -> {
             try {
@@ -193,7 +216,11 @@ public class Client {
             }
         });
 
-        frame.add(splitPane);
+        // Set frame layout and add header and main split pane
+        frame.getContentPane().setLayout(new BorderLayout());
+        frame.getContentPane().add(headerPanel, BorderLayout.NORTH);
+        frame.getContentPane().add(splitPane, BorderLayout.CENTER);
+
         frame.setVisible(true);
         return frame;
     }
@@ -202,7 +229,7 @@ public class Client {
     private JTextField createChatInput() {
         JTextField chatInput = new JTextField("Type Here");
         chatInput.setForeground(Color.GRAY);
-    
+   
         // Handle placeholder text display
         chatInput.addFocusListener(new FocusAdapter() {
             @Override
@@ -212,7 +239,7 @@ public class Client {
                     chatInput.setForeground(Color.BLACK);
                 }
             }
-    
+   
             @Override
             public void focusLost(FocusEvent e) {
                 if (chatInput.getText().isEmpty()) {
@@ -221,21 +248,20 @@ public class Client {
                 }
             }
         });
-    
+   
         // Send chat messages on Enter key
         chatInput.addActionListener(e -> {
             String msg = chatInput.getText().trim();
             if (!msg.isEmpty() && !msg.equals("Type Here")) {
                 out.println("CHAT:" + username + ":" + msg); // Send without extra space
-                updateChat("You: " + msg); //  Fixed spacing here
+                updateChat("You: " + msg);
                 chatInput.setText("");
             }
         });
-    
+   
         return chatInput;
     }
-    
-
+   
     // Thread to listen for server messages and handle different command types
     private void startServerListenerThread() {
         new Thread(() -> {
@@ -251,14 +277,12 @@ public class Client {
                         } else {
                             updateChat("Unknown: " + message.substring(5));
                         }
-                        
                     } else if (message.startsWith("EDITOR:")) {
                         // Handle editor updates
                         String encodedContent = message.substring(7);
                         byte[] decodedBytes = Base64.getDecoder().decode(encodedContent);
                         String decodedContent = new String(decodedBytes, StandardCharsets.UTF_8);
                         updateEditor(decodedContent);
-                        
                     } else if (message.startsWith("CURSOR:")) {
                         // Handle remote cursor positions with username
                         String[] parts = message.split(":", 3);
@@ -267,7 +291,7 @@ public class Client {
                             if (!remoteUsername.equals(this.username)) { // Ignore own cursor
                                 try {
                                     int pos = Integer.parseInt(parts[2]);
-                                    remoteCursorColors.putIfAbsent(remoteUsername, 
+                                    remoteCursorColors.putIfAbsent(remoteUsername,
                                         new Color(new Random().nextInt(256),
                                         new Random().nextInt(256),
                                         new Random().nextInt(256)));
@@ -279,7 +303,6 @@ public class Client {
                                 }
                             }
                         }
-                        
                     } else if (message.startsWith("FOCUS:")) {
                         // Handle focus state changes
                         String[] parts = message.split(":", 3);
@@ -291,7 +314,6 @@ public class Client {
                                 overlay.repaint();
                             }
                         }
-                        
                     } else if (message.startsWith("DISCONNECT:")) {
                         // Handle client disconnections
                         String disconnectedUser = message.substring("DISCONNECT:".length());
@@ -299,7 +321,21 @@ public class Client {
                         remoteCursorColors.remove(disconnectedUser);
                         remoteFocusStates.remove(disconnectedUser);
                         overlay.repaint();
-                        
+                    } else if (message.startsWith("TIMER_UPDATE:")) {
+                        // Format: TIMER_UPDATE:<elapsedSeconds>:<status>
+                        String[] parts = message.split(":");
+                        if (parts.length == 3) {
+                            try {
+                                int elapsed = Integer.parseInt(parts[1]);
+                                int minutes = elapsed / 60;
+                                int seconds = elapsed % 60;
+                                SwingUtilities.invokeLater(() -> 
+                                    timerLabel.setText(String.format("Timer: %02d:%02d", minutes, seconds))
+                                );
+                            } catch (NumberFormatException nfe) {
+                                // Ignore parsing error
+                            }
+                        }
                     }
                 }
             } catch (SocketException e) {
@@ -426,13 +462,13 @@ class RemoteCursorOverlay extends JComponent {
     private final Map<String, Boolean> remoteFocusStates;
 
     public RemoteCursorOverlay(JTextArea editor,
-        Map<String, Integer> remoteCursors,
-        Map<String, Color> remoteCursorColors,
-        Map<String, Boolean> remoteFocusStates) {
-            this.editor = editor;
-            this.remoteCursors = remoteCursors;
-            this.remoteCursorColors = remoteCursorColors;
-            this.remoteFocusStates = remoteFocusStates;
+                               Map<String, Integer> remoteCursors,
+                               Map<String, Color> remoteCursorColors,
+                               Map<String, Boolean> remoteFocusStates) {
+        this.editor = editor;
+        this.remoteCursors = remoteCursors;
+        this.remoteCursorColors = remoteCursorColors;
+        this.remoteFocusStates = remoteFocusStates;
     }
 
     @Override

@@ -5,7 +5,6 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class ClientHandler extends Thread {
     private final Socket socket;
@@ -55,6 +54,14 @@ public class ClientHandler extends Thread {
                         broadcast(updatedMessage);
                     }
                 }
+                // Handle timer control commands
+                else if (message.equals("TIMER_START")) {
+                    Server.startTimer();
+                } else if (message.equals("TIMER_PAUSE")) {
+                    Server.pauseTimer();
+                } else if (message.equals("TIMER_RESET")) {
+                    Server.resetTimer();
+                }
                 // Broadcast other messages normally
                 else {
                     broadcast(message);
@@ -76,6 +83,11 @@ public class ClientHandler extends Thread {
                 Server.clearEditorState();
             }
         }
+    }
+
+    // Public method to send a message to this client
+    public void sendMessage(String message) {
+        out.println(message);
     }
 
     private void broadcast(String message) {

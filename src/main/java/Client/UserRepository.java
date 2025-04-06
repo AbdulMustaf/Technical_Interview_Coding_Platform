@@ -1,15 +1,23 @@
 package Client;
 
-import java.io.*;
-import java.util.Base64;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+
 
 public class UserRepository {
     private static final String CSV_FILE = "users.csv";
     private static final String DELIMITER = ",";
 
+
     public static void saveUser(User user) throws IOException {
         File file = new File(CSV_FILE);
         boolean fileExists = file.exists();
+
 
         // Check if username already exists
         if (fileExists) {
@@ -24,6 +32,7 @@ public class UserRepository {
             }
         }
 
+
         // Save the new user with plain text password
         try (PrintWriter out = new PrintWriter(new FileWriter(CSV_FILE, true))) {
             if (!fileExists) {
@@ -33,9 +42,11 @@ public class UserRepository {
         }
     }
 
+
     public static User findUserByUsername(String username) throws IOException {
         File file = new File(CSV_FILE);
         if (!file.exists()) return null;
+
 
         try (BufferedReader reader = new BufferedReader(new FileReader(CSV_FILE))) {
             String line;
