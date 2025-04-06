@@ -1,8 +1,24 @@
 package Client;
 
-import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
@@ -10,8 +26,24 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
-import javax.swing.*;
-import javax.swing.event.*;
+
+import javax.swing.JComponent;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JLayeredPane;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 public class Client {
     private PrintWriter out; // For sending commands to server
@@ -170,6 +202,7 @@ public class Client {
     private JTextField createChatInput() {
         JTextField chatInput = new JTextField("Type Here");
         chatInput.setForeground(Color.GRAY);
+    
         // Handle placeholder text display
         chatInput.addFocusListener(new FocusAdapter() {
             @Override
@@ -179,6 +212,7 @@ public class Client {
                     chatInput.setForeground(Color.BLACK);
                 }
             }
+    
             @Override
             public void focusLost(FocusEvent e) {
                 if (chatInput.getText().isEmpty()) {
@@ -187,17 +221,20 @@ public class Client {
                 }
             }
         });
+    
         // Send chat messages on Enter key
         chatInput.addActionListener(e -> {
             String msg = chatInput.getText().trim();
             if (!msg.isEmpty() && !msg.equals("Type Here")) {
-                out.println("CHAT:" + username + ": " + msg);
-                updateChat("You: " + msg);
+                out.println("CHAT:" + username + ":" + msg); // Send without extra space
+                updateChat("You: " + msg); //  Fixed spacing here
                 chatInput.setText("");
             }
         });
+    
         return chatInput;
     }
+    
 
     // Thread to listen for server messages and handle different command types
     private void startServerListenerThread() {
