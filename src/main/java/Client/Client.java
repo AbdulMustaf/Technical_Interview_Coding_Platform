@@ -4,6 +4,8 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Rectangle;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -80,6 +82,9 @@ public class Client {
 
             JFrame frame = buildGUI();
 
+            // Display username in the title bar
+            frame.setTitle("CodeRounds - " + username);
+
             // Send window activation events to track focus state
             frame.addWindowListener(new WindowAdapter() {
                 @Override
@@ -117,7 +122,7 @@ public class Client {
     }
 
     private JFrame buildGUI() {
-        JFrame frame = new JFrame("Interview Client");
+        JFrame frame = new JFrame();
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(800, 500);
 
@@ -136,8 +141,24 @@ public class Client {
         menuBar.add(fileMenu);
         frame.setJMenuBar(menuBar);
 
-        // Create header panel with timer and control buttons at the top-right
+        // Create header panel with two sections: toolbar (left) and timer controls (right)
         JPanel headerPanel = new JPanel(new BorderLayout());
+        
+        // Toolbar with Clear and Copy buttons
+        JPanel toolbarPanel = new JPanel(); // defaults to FlowLayout
+        JButton clearButton = new JButton("🧹 Clear");
+        clearButton.addActionListener(e -> editorArea.setText(""));
+        toolbarPanel.add(clearButton);
+
+        JButton copyButton = new JButton("📋 Copy");
+        copyButton.addActionListener(e -> {
+            StringSelection selection = new StringSelection(editorArea.getText());
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
+        });
+        toolbarPanel.add(copyButton);
+        headerPanel.add(toolbarPanel, BorderLayout.WEST);
+        
+        // Timer controls panel on the right
         JPanel timerPanel = new JPanel(); // uses FlowLayout by default
         timerLabel = new JLabel("Timer: 00:00");
         JButton startButton = new JButton("Start ⏵");
@@ -155,14 +176,31 @@ public class Client {
         timerPanel.add(resetButton);
         headerPanel.add(timerPanel, BorderLayout.EAST);
 
-        // Create editor area with document change listener
+        // Create editor area with document change listener (for code changes)
         editorArea = new JTextArea();
         editorArea.getDocument().addDocumentListener(new DocumentListener() {
             @Override
-            public void insertUpdate(DocumentEvent e) { triggerCodeUpdate(); }
+            public void insertUpdate(DocumentEvent e) { 
+                triggerCodeUpdate(); 
+            }
             @Override
-            public void removeUpdate(DocumentEvent e) { triggerCodeUpdate(); }
+            public void removeUpdate(DocumentEvent e) { 
+                triggerCodeUpdate(); 
+            }
             @Override
+            public void changedUpdate(DocumentEvent e) {}
+        });
+
+        // Status bar to show line and character count
+        JLabel statusBar = new JLabel("Lines: 0  |  Characters: 0");
+        editorArea.getDocument().addDocumentListener(new DocumentListener() {
+            private void update() {
+                int lines = editorArea.getLineCount();
+                int chars = editorArea.getText().length();
+                statusBar.setText("Lines: " + lines + "  |  Characters: " + chars);
+            }
+            public void insertUpdate(DocumentEvent e) { update(); }
+            public void removeUpdate(DocumentEvent e) { update(); }
             public void changedUpdate(DocumentEvent e) {}
         });
 
@@ -178,7 +216,7 @@ public class Client {
         overlay.setBounds(editorScrollPane.getBounds());
         layeredPane.add(overlay, JLayeredPane.PALETTE_LAYER);
 
-        // Chat area setup
+        // Chat area setup with auto-scroll
         chatArea = new JTextArea();
         chatArea.setEditable(false);
         JScrollPane chatScrollPane = new JScrollPane(chatArea);
@@ -196,7 +234,7 @@ public class Client {
         splitPane.setResizeWeight(0.7);
         splitPane.setContinuousLayout(true);
        
-        // Set initial divider location and resize handling
+        // Set initial divider location and handle resize events
         SwingUtilities.invokeLater(() -> {
             try {
                 splitPane.setDividerLocation(0.7);
@@ -216,10 +254,11 @@ public class Client {
             }
         });
 
-        // Set frame layout and add header and main split pane
+        // Set frame layout and add header, split pane, and status bar
         frame.getContentPane().setLayout(new BorderLayout());
         frame.getContentPane().add(headerPanel, BorderLayout.NORTH);
         frame.getContentPane().add(splitPane, BorderLayout.CENTER);
+        frame.getContentPane().add(statusBar, BorderLayout.SOUTH);
 
         frame.setVisible(true);
         return frame;
@@ -249,7 +288,7 @@ public class Client {
             }
         });
    
-        // Send chat messages on Enter key
+        // Send chat messages on Enter key and auto-scroll
         chatInput.addActionListener(e -> {
             String msg = chatInput.getText().trim();
             if (!msg.isEmpty() && !msg.equals("Type Here")) {
@@ -293,9 +332,8 @@ public class Client {
                                     int pos = Integer.parseInt(parts[2]);
                                     remoteCursorColors.putIfAbsent(remoteUsername,
                                         new Color(new Random().nextInt(256),
-                                        new Random().nextInt(256),
-                                        new Random().nextInt(256)));
-
+                                                  new Random().nextInt(256),
+                                                  new Random().nextInt(256)));
                                     remoteCursors.put(remoteUsername, pos);
                                     overlay.repaint();
                                 } catch (NumberFormatException ex) {
@@ -393,9 +431,12 @@ public class Client {
         });
     }
 
-    // Append messages to chat area
+    // Append messages to chat area and auto-scroll to the latest message
     private void updateChat(String text) {
-        SwingUtilities.invokeLater(() -> chatArea.append(text + "\n"));
+        SwingUtilities.invokeLater(() -> {
+            chatArea.append(text + "\n");
+            chatArea.setCaretPosition(chatArea.getDocument().getLength());
+        });
     }
 
     // Open file and load into editor
@@ -486,13 +527,11 @@ class RemoteCursorOverlay extends JComponent {
                 if (r != null) {
                     Color color = remoteCursorColors.get(username);
                     g.setColor(color);
-
                     // draw cursor
                     int x = r.x;
                     int y = r.y;
                     int height = r.height;
                     g.fillRect(x, y, 2, height);
-
                     // draw username
                     g.drawString(username, x + 5, y - 5);
                 }
