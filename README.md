@@ -61,13 +61,14 @@ If the port being used by the program is already in use, there are 2 options:
 
 ### External Dependencies
 This project uses only standard Java Library components.
+
 ---
 ## Resources
 - Java 23: [Download Java 23](https://www.oracle.com/java/technologies/downloads/#java23)
 - Git: [Download Git](https://git-scm.com/downloads)
 ---
 ## Contributors
-**Project Group 1**
+**Project Group 1**\
 Members:
   - Samir Ahmadi
   - Farid Jamshid
