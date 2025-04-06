@@ -15,9 +15,10 @@ This project enables interviewers and interviewees to collaborate in real-time d
 
 ### Demonstration Of Functionality
 The video below demonstrates and talks briefly about the different functions that our application performs.
-## How To Run
 
 ---
+
+## How To Run
 
 ### Requirements
 - In order to run, you must have Java 11 or later installed on your system. Refer to the "Resources" section near the bottom of the document for a link to Java 23.
