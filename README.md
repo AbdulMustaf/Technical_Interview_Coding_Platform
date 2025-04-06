@@ -10,6 +10,7 @@ This project enables interviewers and interviewees to collaborate in real-time d
 <div align="center">
   <img src="CodeRoundsScreenshot.png">
 </div>
+
 ---
 
 ## How To Run
@@ -31,6 +32,8 @@ To run the application, follow these steps:
   3. Then, compile and run 2 or more instances of `Client.java`.
   4. Login screens will appear. Create a new account(s) or refer to `users.csv` for 2 premade accounts.
   5. Once both clients are logged in, the editor will appear on the left and the chat on the right. There will also be a dropdown menu named "File" in the top left to open and save files.
+     
+---
 
 ### Demonstration Of Functionality
 The video below demonstrates and talks briefly about the different functions that our application performs.
@@ -55,14 +58,14 @@ If the port being used by the program is already in use, there are 2 options:
 - `java.nio.charset`: Was used for character endcoding using `StandardCharsets`.
 - `java.util`: Was used for general utilities and collections like `Base64`, `Random`, `Map`, `List`, `ConcurrentHashMap`, and `CopyOnWriteArrayList`.
 - `java.util.concurrent`: Was used for it's thread-safe concurrency utilities `ConcurrentHashMap` and `CopyOnWriteArrayList`.
----
+
 ### External Dependencies
 This project uses only standard Java Library components.
-
+---
 ## Resources
-Java 23: [Download Java 23](https://www.oracle.com/java/technologies/downloads/#java23)
-Git: [Download Git](https://git-scm.com/downloads)
-
+- Java 23: [Download Java 23](https://www.oracle.com/java/technologies/downloads/#java23)
+- Git: [Download Git](https://git-scm.com/downloads)
+---
 ## Contributors
 **Project Group 1**
 Members:
