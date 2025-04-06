@@ -13,7 +13,11 @@ This project enables interviewers and interviewees to collaborate in real-time d
 
 ---
 
+### Demonstration Of Functionality
+The video below demonstrates and talks briefly about the different functions that our application performs.
 ## How To Run
+
+---
 
 ### Requirements
 - In order to run, you must have Java 11 or later installed on your system. Refer to the "Resources" section near the bottom of the document for a link to Java 23.
@@ -32,11 +36,6 @@ To run the application, follow these steps:
   3. Then, compile and run 2 or more instances of `Client.java`.
   4. Login screens will appear. Create a new account(s) or refer to `users.csv` for 2 premade accounts.
   5. Once both clients are logged in, the editor will appear on the left and the chat on the right. There will also be a dropdown menu named "File" in the top left to open and save files.
-     
----
-
-### Demonstration Of Functionality
-The video below demonstrates and talks briefly about the different functions that our application performs.
 
 ### Troubleshooting
 **Port unavailable/already in use:**
@@ -50,6 +49,7 @@ If the port being used by the program is already in use, there are 2 options:
 ---
 
 ## Libraries and Dependencies
+
 ### Libraries
 - `java.awt`: Was used for GUI components `Color` and `Rectangle` and Layout managers like `GridLayout` and `BorderLayout`.
 - `javax.swing`: Was used for swing GUI components like `JFrame`, `JTextArea`, `JButton`, `JMenuBar`, and `JOptionPane`.
@@ -63,10 +63,13 @@ If the port being used by the program is already in use, there are 2 options:
 This project uses only standard Java Library components.
 
 ---
+
 ## Resources
 - Java 23: [Download Java 23](https://www.oracle.com/java/technologies/downloads/#java23)
 - Git: [Download Git](https://git-scm.com/downloads)
+  
 ---
+
 ## Contributors
 **Project Group 1**\
 Members:
