@@ -96,10 +96,7 @@ public class Client {
                 public void windowActivated(WindowEvent e) {
                     out.println("FOCUS:" + clientId + ":gained");
                 }
-            });
 
-            // When window is closed, shutdown client and release resources
-            frame.addWindowListener(new WindowAdapter() {
                 @Override
                 public void windowClosing(WindowEvent e) {
                     shutdownClient();
