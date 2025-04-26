@@ -16,7 +16,7 @@ This project enables interviewers and interviewees to collaborate in real-time d
 ### Demonstration Of Functionality
 The video below demonstrates and talks briefly about the different functions that our application performs.
 
-[[![Watch the Video]([https://drive.google.com/file/d/1_PJgmlZe5YkrmrTIePYtK5ON6s9-U0aI/view?usp=sharing](https://www.youtube.com/watch?v=1pG8Kyim4sM))]](https://drive.google.com/file/d/19YocCJGLePVzGYrIfh9vvlh6FI-3e3Dw/view?usp=sharing)
+[![Watch the Video](https://img.youtube.com/vi/1pG8Kyim4sM/0.jpg)](https://www.youtube.com/watch?v=1pG8Kyim4sM)
 
 ---
 
